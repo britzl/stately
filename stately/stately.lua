@@ -34,7 +34,7 @@ function M.create()
 	function instance.state(state)
 		assert(state, "You must provide a state name")
 		state = ensure_hash(state)
-		assert(not states[state], ("State %s already exists"):format(state))
+		assert(not states[state], ("State %s already exists"):format(tostring(state)))
 		states[state] = { id = state }
 		events[state] = {}
 		return states[state]
@@ -46,9 +46,9 @@ function M.create()
 	-- @param event Event that will trigger the transition
 	function instance.transition(from_state, to_state, event)
 		assert(from_state, "You must provide a from state")
-		assert(states[from_state.id], ("From state %s does not exist"):format(from_state.id))
+		assert(states[from_state.id], ("From state %s does not exist"):format(tostring(from_state.id)))
 		assert(to_state, "You must provide a to state")
-		assert(states[to_state.id], ("To state %s does not exist"):format(to_state.id))
+		assert(states[to_state.id], ("To state %s does not exist"):format(tostring(to_state.id)))
 		assert(event, "You must provide an event name")
 		event = ensure_hash(event)
 		events[from_state.id][event] = to_state.id
@@ -64,7 +64,7 @@ function M.create()
 	function instance.on_enter(state, cb)
 		assert(state, "You must provide a state")
 		assert(cb, "You must provide a callback")
-		assert(states[state.id], ("State %s does not exist"):format(state.id))
+		assert(states[state.id], ("State %s does not exist"):format(tostring(state.id)))
 		enter_state_callbacks[state.id] = enter_state_callbacks[state.id] or {}
 		table.insert(enter_state_callbacks[state.id], cb)
 	end
@@ -79,7 +79,7 @@ function M.create()
 	function instance.on_leave(state, cb)
 		assert(state, "You must provide a state")
 		assert(cb, "You must provide a callback")
-		assert(states[state.id], ("State %s does not exist"):format(state.id))
+		assert(states[state.id], ("State %s does not exist"):format(tostring(state.id)))
 		leave_state_callbacks[state.id] = leave_state_callbacks[state.id] or {}
 		table.insert(leave_state_callbacks[state.id], cb)
 	end
@@ -102,7 +102,7 @@ function M.create()
 	function instance.start(state)
 		assert(not current_state, "State machine already started")
 		assert(state, "You must provide a state")
-		assert(states[state.id], ("State %s does not exist"):format(state))
+		assert(states[state.id], ("State %s does not exist"):format(tostring(state)))
 		current_state = state.id
 		invoke_callbacks(enter_state_callbacks[state.id], state.id)
 		invoke_callbacks(state_change_callbacks, nil, state.id)
