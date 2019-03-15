@@ -1,0 +1,151 @@
+local stately = require "stately.stately"
+local platypus = require "platypus.platypus"
+
+local ACTION_LEFT = hash("left")
+local ACTION_RIGHT = hash("right")
+local ACTION_JUMP = hash("jump")
+local ACTION_DUCK = hash("duck")
+
+local ACTION_LEFT_PRESSED = hash("left_pressed")
+local ACTION_LEFT_RELEASED = hash("left_released")
+local ACTION_RIGHT_PRESSED = hash("right_pressed")
+local ACTION_RIGHT_RELEASED = hash("right_released")
+local ACTION_JUMP_PRESSED = hash("jump_pressed")
+local ACTION_JUMP_RELEASED = hash("jump_released")
+local ACTION_DUCK_PRESSED = hash("duck_pressed")
+local ACTION_DUCK_RELEASED = hash("duck_released")
+
+local GROUND_SPEED = 200
+local AIR_SPEED = 120
+local JUMP_POWER = 500
+
+function init(self)
+	self.platypus = platypus.create({
+		collisions = {
+			ground = { hash("ground") },
+			left = 30, right = 30, top = 45, bottom = 45
+		},
+		gravity = -600
+	})
+
+	self.actions = {}
+	
+	self.stately = stately.create()
+	local idle = self.stately.state()
+	local walk_left = self.stately.state()
+	local walk_right = self.stately.state()
+	local jump = self.stately.state()
+	local jump_right = self.stately.state()
+	local jump_left = self.stately.state()
+	local fall = self.stately.state()
+	local duck = self.stately.state()
+	-- to walk
+	self.stately.transition(idle, walk_left, ACTION_LEFT_PRESSED)
+	self.stately.transition(idle, walk_right, ACTION_RIGHT_PRESSED)
+	self.stately.transition(walk_left, walk_right, ACTION_RIGHT_PRESSED)
+	self.stately.transition(walk_right, walk_left, ACTION_LEFT_PRESSED)
+	-- to idle
+	self.stately.transition(walk_left, idle, ACTION_LEFT_RELEASED)
+	self.stately.transition(walk_right, idle, ACTION_RIGHT_RELEASED)
+	-- to jump
+	self.stately.transition(idle, jump, ACTION_JUMP_PRESSED)
+	self.stately.transition(walk_left, jump_left, ACTION_JUMP_PRESSED)
+	self.stately.transition(walk_right, jump_right, ACTION_JUMP_PRESSED)
+
+	self.stately.transition(jump, idle, platypus.GROUND_CONTACT)
+	self.stately.transition(jump_left, walk_left, platypus.GROUND_CONTACT)
+	self.stately.transition(jump_right, walk_right, platypus.GROUND_CONTACT)
+	self.stately.transition(jump_left, jump, ACTION_LEFT_RELEASED)
+	self.stately.transition(jump_right, jump, ACTION_RIGHT_RELEASED)
+			
+	self.stately.on_enter(idle, function()
+		sprite.play_flipbook("#sprite", "p1_idle")
+	end)
+	
+	self.stately.on_enter(walk_left, function()
+		sprite.play_flipbook("#sprite", "p1_walk")
+		sprite.set_hflip("#sprite", true)
+	end)
+	self.stately.on_update(walk_left, function(dt)
+		self.platypus.left(GROUND_SPEED)
+	end)
+	
+	self.stately.on_enter(walk_right, function()
+		sprite.play_flipbook("#sprite", "p1_walk")
+		sprite.set_hflip("#sprite", false)
+	end)
+	self.stately.on_update(walk_right, function(dt)
+		self.platypus.right(GROUND_SPEED)
+	end)
+
+	self.stately.on_enter(jump, function()
+		self.platypus.jump(JUMP_POWER)
+		sprite.play_flipbook("#sprite", "p1_jump")
+	end)
+
+	self.stately.on_enter(jump_left, function()
+		self.platypus.jump(JUMP_POWER)
+		sprite.play_flipbook("#sprite", "p1_jump")
+	end)
+	self.stately.on_update(jump_left, function(dt)
+		self.platypus.left(AIR_SPEED)
+	end)
+	
+	self.stately.on_enter(jump_right, function()
+		self.platypus.jump(JUMP_POWER)
+		sprite.play_flipbook("#sprite", "p1_jump")
+	end)
+	self.stately.on_update(jump_right, function(dt)
+		self.platypus.right(AIR_SPEED)
+	end)
+			
+	self.stately.start(idle)
+		
+	msg.post(".", "acquire_input_focus")
+end
+
+function update(self, dt)
+	self.stately.update(dt)
+	self.platypus.update(dt)
+end
+
+function on_message(self, message_id, message, sender)
+	self.platypus.on_message(message_id, message)
+	if message_id == platypus.GROUND_CONTACT then
+		print("ground contact")
+		self.stately.handle_event(platypus.GROUND_CONTACT)
+	end
+end
+
+function on_input(self, action_id, action)
+	if action_id == ACTION_LEFT then
+		if action.pressed then
+			self.stately.handle_event(ACTION_LEFT_PRESSED)
+		elseif action.released then
+			self.stately.handle_event(ACTION_LEFT_RELEASED)
+		end
+	elseif action_id == ACTION_RIGHT then
+		if action.pressed then
+			self.stately.handle_event(ACTION_RIGHT_PRESSED)
+		elseif action.released then
+			self.stately.handle_event(ACTION_RIGHT_RELEASED)
+		end
+	elseif action_id == ACTION_JUMP then
+		if action.pressed then
+			self.stately.handle_event(ACTION_JUMP_PRESSED)
+		elseif action.released then
+			self.stately.handle_event(ACTION_JUMP_RELEASED)
+		end
+	elseif action_id == ACTION_DUCK then
+		if action.pressed then
+			self.stately.handle_event(ACTION_DUCK_PRESSED)
+		elseif action.released then
+			self.stately.handle_event(ACTION_DUCK_RELEASED)
+		end
+	end
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Remove this function if not needed
+end

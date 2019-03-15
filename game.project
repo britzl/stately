@@ -10,6 +10,7 @@ height = 640
 
 [project]
 title = Stately
+dependencies = https://github.com/britzl/platypus/archive/3.0.2.zip
 
 [library]
 include_dirs = stately

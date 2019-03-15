@@ -16,8 +16,11 @@ function M.create()
 	local state_change_callbacks = {}
 	local enter_state_callbacks = {}
 	local leave_state_callbacks = {}
-	
+	local update_state_callbacks = {}
+		
 	local current_state = nil
+
+	local state_counter = 0
 
 	local function invoke_callbacks(callbacks, ...)
 		if not callbacks then
@@ -29,11 +32,15 @@ function M.create()
 	end
 
 	--- Create a state
-	-- @param name
+	-- @param name Name of the state or null for an auto generated name
 	-- @return The state instance
 	function instance.state(state)
-		assert(state, "You must provide a state name")
-		state = ensure_hash(state)
+		if not state then
+			state = hash("stately" .. tostring(state_counter))
+			state_counter = state_counter + 1
+		else
+			state = ensure_hash(state)
+		end
 		assert(not states[state], ("State %s already exists"):format(tostring(state)))
 		states[state] = { id = state }
 		events[state] = {}
@@ -85,6 +92,16 @@ function M.create()
 	end
 
 
+
+	function instance.on_update(state, cb)
+		assert(state, "You must provide a state")
+		assert(cb, "You must provide a callback")
+		assert(states[state.id], ("State %s does not exist"):format(tostring(state.id)))
+		update_state_callbacks[state.id] = update_state_callbacks[state.id] or {}
+		table.insert(update_state_callbacks[state.id], cb)
+	end
+
+
 	--- Set a function to be called when the state changes
 	-- Supports multiple functions
 	-- @param cb The function to call when a state change occurs. The function
@@ -126,6 +143,14 @@ function M.create()
 		invoke_callbacks(leave_state_callbacks[from_state], to_state, ...)
 		invoke_callbacks(enter_state_callbacks[to_state], from_state, ...)
 		invoke_callbacks(state_change_callbacks, from_state, to_state, ...)
+	end
+
+
+	function instance.update(dt)
+		assert(dt, "You must provide a delta time")
+		if current_state and update_state_callbacks[current_state] then
+			invoke_callbacks(update_state_callbacks[current_state], dt)
+		end
 	end
 
 	--- Get the id of the current state
